@@ -15,7 +15,7 @@ FROM (
 		ORDER BY cst_create_date DESC )
 	AS flag_last
 	FROM dw_bronze.crm_cust_info)t
-WHERE flag_last !=1;
+WHERE flag_last =1;
 
 /* Checking for white spaces (CHECK FOR ALL COLUMNS BY REPLACING THE COLUMN NAME IN THE BELOW QUERY*/
 SELECT cst_firstname
