@@ -1,0 +1,74 @@
+SELECT
+cid,
+bdate,
+gen
+FROM dw_bronze.erp_cust_az12;
+
+-- Fixing the cid column.
+-- There are unwanted characters in the cid column that we need to fix in order to relate it to the dw_silver.crm_cust_info table.
+-- The difference is in crm_cust_info table, the cust_key values are like this "AW00011287", but in erp_cust_az12, it is like this "NASAW00011287"
+SELECT
+cid,
+CASE 
+	WHEN cid LIKE 'NAS%' THEN SUBSTRING(cid,4,LENGTH(cid))
+    ELSE cid
+END AS ncid,
+bdate,
+gen
+FROM dw_bronze.erp_cust_az12;
+
+-- Checking for mismatching key column values between tables.
+SELECT 
+CASE 
+    WHEN cid LIKE 'NAS%' THEN SUBSTRING(cid,4,LENGTH(cid))
+    ELSE cid
+END AS cid
+FROM dw_bronze.erp_cust_az12
+WHERE 
+CASE 
+    WHEN cid LIKE 'NAS%' THEN SUBSTRING(cid,4,LENGTH(cid))
+    ELSE cid 
+END NOT IN (SELECT DISTINCT cst_key FROM dw_silver.crm_cust_info);
+
+-- Checking for invalid dates in birth dates (in future or people with older than 100 years)
+SELECT 
+bdate,
+CASE WHEN bdate > CURDATE() THEN NULL
+	ELSE bdate
+END AS bdate_new
+FROM dw_bronze.erp_cust_az12;
+
+-- Normalizing the Gender column
+SELECT DISTINCT gen,
+CASE
+	WHEN UPPER(TRIM(gen)) IN ('F', 'FEMALE') THEN 'Female'
+    WHEN UPPER(TRIM(gen)) IN ('M', 'MALE') THEN 'Male'
+    ELSE 'n/a'
+END AS gen_new
+FROM dw_bronze.erp_cust_az12;
+
+-- Insertion in to dw_silver.erp_cust_az12
+INSERT INTO dw_silver.erp_cust_az12(
+	cid,
+    bdate,
+    gen
+)
+SELECT 
+CASE 
+    WHEN cid LIKE 'NAS%' THEN SUBSTRING(cid,4,LENGTH(cid))
+    ELSE cid
+END AS cid,
+CASE WHEN bdate > CURDATE() THEN NULL
+	ELSE bdate
+END AS bdate,
+CASE
+	WHEN UPPER(TRIM(gen)) IN ('F', 'FEMALE') THEN 'Female'
+    WHEN UPPER(TRIM(gen)) IN ('M', 'MALE') THEN 'Male'
+    ELSE 'n/a'
+END AS gen
+FROM dw_bronze.erp_cust_az12;
+
+-- Checking the insertion data
+SELECT *
+FROM dw_silver.erp_cust_az12
+WHERE bdate IS NULL;
