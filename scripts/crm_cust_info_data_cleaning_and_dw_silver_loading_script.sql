@@ -130,3 +130,7 @@ FROM(
     FROM dw_bronze.crm_cust_info
     WHERE cst_id IS NOT NULL)t
 WHERE flag_last = 1;
+
+
+SELECT *
+FROM dw_silver.crm_cust_info;
